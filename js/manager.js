@@ -1,3 +1,5 @@
+/*global console:true, window:true, jQuery:true */
+
 (function (window, $) {
 	var managers = {};
 	
@@ -7,18 +9,18 @@
 	
 	window.vsa = {
 		manager: function manager (managerName, maintentanceMethods, privateMethods, publicMethods) {
-			var manager,
+			var _manager,
 				method;
 			
 			if (managers[managerName]) {
 				throw 'Manager "' + managerName + '" has already been defined.';
 			}
 			
-			manager = managers[managerName] = {};
+			_manager = managers[managerName] = {};
 			
-			$.extend(manager, privateMethods, publicMethods);
-			manager.public = publicMethods;
-			manager.private = privateMethods;
+			$.extend(_manager, privateMethods, publicMethods);
+			_manager._public = publicMethods;
+			_manager._private = privateMethods;
 			
 			for (method in publicMethods) {
 				if (publicMethods.hasOwnProperty(method)) {
@@ -55,7 +57,7 @@
 				memberName = eventNameParts[1],
 				handler = managers[managerName][memberName];
 				
-			if (managers[managerName].public[memberName] && typeof handler === 'function') {
+			if (managers[managerName]._public[memberName] && typeof handler === 'function') {
 				return handler.apply(managers[managerName], [$.makeArray(arguments).slice(1)]);
 			} else {
 				if (console && console.error) {
@@ -77,7 +79,7 @@
 			
 			'unlock': function unlock (component) {
 				if (typeof this[component] !== 'boolean') {
-					throw component + ' is not an unlockable _intro component'
+					throw component + ' is not an unlockable _intro component';
 				}
 
 				this[component] = false;
@@ -85,7 +87,7 @@
 
 			'isLocked': function isLocked (component) {
 				if (typeof this[component] !== 'boolean') {
-					throw component + ' is not an _intro component'
+					throw component + ' is not an _intro component';
 				}
 
 				return this[component];
@@ -107,4 +109,4 @@
 		}
 	};
 	
-})(window, jQuery)
+}(window, jQuery));
