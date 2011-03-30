@@ -9,7 +9,7 @@ $(function(){
 			return "Hello!  I'm a return value!";
 		}
 	}, { // Public methods
-		// call this with `vsa.trigger('article.toggle');`
+		// call this with `vsa.fire('article.toggle');`
 		toggle: function toggle () {
 			return this._open();
 		}
@@ -23,13 +23,13 @@ $(function(){
 	}, {
 		// Private vars
 	}, {
-		// vsa.trigger('aside.activate')
+		// vsa.fire('aside.activate')
 		activate: function toggle () {
-			console.log('trying to trigger a public method...')
-			vsa.trigger('article.toggle');
+			console.log('trying to fire a public method...')
+			vsa.fire('article.toggle');
 			
-			console.log('trying to trigger a private method...')
-			vsa.trigger('article._open');
+			console.log('trying to fire a private method...')
+			vsa.fire('article._open');
 		}
 	});
 });
