@@ -25,8 +25,14 @@ Dependencies: jQuery, Modernizr
 	}
 	
 	/* Private methods ********************************/
-	function isFunc(fn) {
+	function isFunc (fn) {
 		return (typeof fn === 'function');
+	}
+	
+	function logError (msg) {
+		if (console && console.error) {
+			console.error(msg);
+		}
 	}
 	/******************************** Private methods */
 	
@@ -104,7 +110,7 @@ Dependencies: jQuery, Modernizr
 		},
 
 		/**
-		 * Attach an action handler to an action.  This action can be accessed globally.
+		 * Attach an action handler to an action.  This action can be accessed globally with `vsa.fire()`.
 		 * @param {String} actionName The action to attach to, given in `managerName.action` format
 		 * @returns {Object} The global `vsa` object for chaining
 		 */
@@ -159,11 +165,61 @@ Dependencies: jQuery, Modernizr
 				}
 			}
 		},
+		
+		/**
+		 * Wraps `vsa.lock` (see below!) to start an asynchronous sequence.  If there is a lock for the sequence, then this function blocks the sequence from beginning.  Blocked sequences are not queued - the method just returns.  This is beneficial because certain logical sequences (animations) must not be started again before being ended completely.
+		 * @param {String} sequenceName The name of the sequence.  This usually should, but does not have to, have the same name as the action that it represents.
+		 * @param {Function} sequence The sequence function to invoke.  It will NOT be invoked if the lock has not been lifted (either by calling `vsa.lock.unlock()` or `vsa.endSequence()`).  You should have a call to `vsa.endSequence()` when the function is done.  `sequenceName` is passed as the first parameter to this function as a convenience.
+		 * @param {Boolean} ignoreLock Set this to `true` to start the squence regardless of any locks.
+		 * @returns {Boolean} Whether or not the sequence was started. (`true` if it was, `false` if it was not).
+		 */
+		startSequence: function startSequence (sequenceName, sequence, ignoreLock) {
+			if (!sequenceName) {
+				throw 'vsa.startSequence: "sequenceName" not provided!';
+			}
+			
+			if (!window.vsa.lock.lockExists(sequenceName)) {
+				logError('vsa.startSequence: Lock "' + sequenceName + '" does not exist, making it for you...');
+				
+				window.vsa.lock.createLock(sequenceName);
+			}
+			
+			if (!window.vsa.lock.isLocked(sequenceName) || ignoreLock === true) {
+				window.vsa.lock.lock(sequenceName);
+				
+				if (isFunc(sequence)) {
+					sequence(sequenceName);
+				}
+				
+				return true;
+			} else {
+				//console.log("There is a lock!  And it's not being overridden!");
+				return false;
+			}
+		},
+		
+		/**
+		 * Ends a sequence.  Calling this removes the corresponding lock and allows the sequence to be run again.
+		 * @param {String} sequenceName The name of the sequence.  This must correspond to the sequenceName provided to `vsa.startSequence()`.
+		 */
+		endSequence: function endSequence (sequenceName) {
+			if (!window.vsa.lock.lockExists(sequenceName)) {
+				throw 'vsa.endSequence: "' + sequenceName + '" does not exist!';
+			}
+			
+			window.vsa.lock.unlock(sequenceName);
+		},
 
 		/**
 		A locking mechanism that can be used to prevent asynchronous actions from starting before the previous sequence has completed.  This is handy for complex animations.  First, create a lock with `vsa.lock.createLock()`.  Then lock and unlock it with `vsa.lock.lock()` and `vsa.lock.unlock()`.  'vsa.lock.isLocked()' will tell you if something is locked or not.  You can check if a lock has been made with `vsa.lock.lockExists()`.  The use case is to `return` out of the beginning of a function if you want the sequence to be NOT be executed asynchronously.
 		*/
 		lock: {
+			/** 
+			 * Adds a lock to the internal `locks` collection.
+			 * @param {String} lockName Name of the lock.
+			 * @param {Boolean} lockedToStart Whether the lock should be locked to begin with.  Defaults to `false`.
+			 * @returns {Boolean} Whether or not the newly created lock is locked.
+			 */
 			'createLock': function createLock (lockName, lockedToStart) {
 				if (!lockName) {
 					throw 'You need to name this lock!';
@@ -176,10 +232,18 @@ Dependencies: jQuery, Modernizr
 				return this.isLocked(lockName);
 			},
 			
+			/**
+			 * Deletes a lock from the internal `locks` collection.
+			 * @param {String} lockName Name of the lock.
+			 */
 			'destroyLock': function destroyLock (lockName) {
 				return delete locks[lockName];
 			},
 
+			/**
+			 * Activates a lock.
+			 * @param {String} lockName Name of the lock.
+			 */
 			'lock': function lock (lockName) {
 				if (typeof locks[lockName] !== 'boolean') {
 					throw 'lock ' + lockName + ' does not exist';
@@ -188,6 +252,10 @@ Dependencies: jQuery, Modernizr
 				return (locks[lockName] = true);
 			},
 
+			/**
+			 * Deactivates a lock.
+			 * @param {String} lockName Name of the lock.
+			 */
 			'unlock': function unlock (lockName) {
 				if (typeof locks[lockName] !== 'boolean') {
 					throw 'lock ' + lockName + ' does not exist';
@@ -196,6 +264,10 @@ Dependencies: jQuery, Modernizr
 				return (locks[lockName] = false);
 			},
 
+			/**
+			 * Returns whether or not a lock is locked.
+			 * @param {String} lockName Name of the lock.
+			 */
 			'isLocked': function isLocked (lockName) {
 				if (typeof locks[lockName] !== 'boolean') {
 					throw 'lock ' + lockName + ' does not exist';
@@ -204,18 +276,16 @@ Dependencies: jQuery, Modernizr
 				return locks[lockName];
 			},
 
-			'lockExists': function thereIsALock () {
-				var prop;
-
-				for (prop in locks) {
-					if (locks.hasOwnProperty(prop)) {
-						if (typeof locks[prop] === 'boolean' && locks[prop] === true) {
-							return true;
-						}
-					}
-				}
-
-				return false;
+			/**
+			 * Returns whether or not a lock has been created with `vsa.lock.createLock()`.
+			 * @param {String} lockName Name of the lock.
+			 */
+			'lockExists': function lockExists (lockName) {
+				return (typeof locks[lockName] !== 'undefined');
+			},
+			
+			'_debug': function () {
+				return locks;
 			}
 		}
 	};
@@ -223,7 +293,7 @@ Dependencies: jQuery, Modernizr
 	
 	// Create the global instance of `vsa`...
 	
-	// Inherit from jQuery!  LOL!
+	// Inherit from jQuery!  No, let's not do that...
 	//vsa.prototype = $;
 	window.vsa = new vsa();
 	
@@ -234,5 +304,4 @@ Dependencies: jQuery, Modernizr
 		}
 	}
 	
-
 }(window, jQuery, Modernizr));
