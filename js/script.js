@@ -1,15 +1,15 @@
 $(function(){
-	vsa.manager('article', {
+	vsa.manager('article', { // Maintenance methods
 		init : function () {
-			console.log('init:', this);
+			console.log('calling init on:', this);
 		}
-	}, {
+	}, { // Private methods
 		_open: function (ev) {
-			console.log('opening...', this);
-			return 5000;
+			console.log('Calling `_open` on the article manager.  This is a private method!', this);
+			return "Hello!  I'm a return value!";
 		}
-	}, {
-		// vsa.trigger('article.toggle')
+	}, { // Public methods
+		// call this with `vsa.trigger('article.toggle');`
 		toggle: function toggle () {
 			return this._open();
 		}
