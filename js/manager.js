@@ -158,12 +158,24 @@ Dependencies: jQuery, Modernizr
 				handler = managers[managerName][memberName];
 
 			if (managers[managerName].__public[memberName] && typeof handler === 'function') {
-				return handler.apply(managers[managerName], [$.makeArray(arguments).slice(1)]);
+				return handler.apply(managers[managerName], $.makeArray(arguments).slice(1));
 			} else {
 				if (console && console.error) {
 					console.error(managerName + ' does not have a public function called ' + memberName);
 				}
 			}
+		},
+		
+		bindAction: function bindAction (jqObj, eventType, actionName) {
+			jqObj.bind(eventType + '.' + actionName, function (ev) {
+				var el = $(ev.target);
+				
+				window.vsa.fire(actionName, ev, el);
+			});
+		},
+		
+		unbindAction: function bindAction (jqObj, eventType, actionName) {
+			jqObj.unbind(eventType + '.' + actionName);
 		},
 		
 		/**

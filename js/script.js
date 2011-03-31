@@ -24,12 +24,21 @@ $(function(){
 		// Private vars
 	}, {
 		// vsa.fire('aside.activate')
-		activate: function toggle () {
+		activate: function activate () {
 			console.log('trying to fire a public method...')
 			vsa.fire('article.toggle');
 			
 			console.log('trying to fire a private method...')
 			vsa.fire('article._open');
+		},
+		
+		sayHello: function sayHello (ev, el) {
+			console.log(ev, el);
+			alert('Hello!');
+			vsa.unbindAction($('#test'), 'click', 'aside.sayHello');
+			console.log('Unbinding "sayHello" from "#test"...');
 		}
 	});
+	
+	vsa.bindAction($('#test'), 'click', 'aside.sayHello');
 });
