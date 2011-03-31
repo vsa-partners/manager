@@ -16,6 +16,7 @@ Dependencies: jQuery, Modernizr
 		_public,
 		prop;
 
+	// Check dependencies
 	if (!$) {
 		throw 'jQuery is not defined.';
 	}
@@ -34,31 +35,47 @@ Dependencies: jQuery, Modernizr
 			console.error(msg);
 		}
 	}
+	
+	/**
+	 * Parses out an action name and return whether or not such a public method actually exists.
+	 * @param {String} actionName The name to check, given in `"managerName.actionName"` format.
+	 * @returns {Boolean}
+	 */
+	function isPublicAction (actionName) {
+		var actionNameParts = actionName.split('.'),
+			managerName = actionNameParts[0],
+			memberName = actionNameParts[1];
+		
+		return (managers[managerName] && typeof managers[managerName].__public[memberName] !== 'undefined');
+	}
 	/******************************** Private methods */
 	
 	/* Public methods *********************************/
 	_public = {
 		/**
-		 * Sets up a code manager.	All a manager really does is help you organize your code and separate your components.  Managers define Public and Private methods.	You can access public methods, globally, by using the `vsa.fire()` method.	All methods of a manager can access private and public methods of itself.  This method also makes locks for each method you provide in the `privateMethods` and `publicMethods` objects, accessible with the naming convention: `managerName.actionName`.
+		 * Sets up a code manager.	All a manager really does is help you organize your code and separate your components.  Managers define Public and Private methods.	You can access public methods, globally, by using the `vsa.actionFire()` method.	All methods of a manager can access private and public methods of itself.  This method also makes locks for each method you provide in the `privateMethods` and `publicMethods` objects, accessible with the naming convention: `managerName.actionName`.
 		 * 
 		 * @param {String} managerName The name that the manager will be accessed by.
-		 * @param {Object} maintentanceMethods Object containing methods that help create a manager. (`init` only, currently)
+		 * @param {Object} maintentanceMethods Object containing methods that help create a manager. Use `init` for manager setup, and `bind` to hook up DOM nodes to manager actions.  These methods are called automatically for you.
 		 * @param {Object} privateMethods Object containing methods that all methods of the manager can access, but cannot be accessed by any other code.
-		 * @param {Object} publicMethods Object containing methods that all methods of the manager can access, but can also be accessed globally with `vsa.fire()`
+		 * @param {Object} publicMethods Object containing methods that all methods of the manager can access, but can also be accessed globally with `vsa.actionFire()`
 		 * @return {Any} The return value of the invoke `init` method, if it was supplied in `maintenanceMethods`
 		 * 
 		 * @codestart
 		 * vsa.manager('article', { // Maintenance methods
 		 *	 init : function () {
 		 *	   console.log('calling init on:', this);
-		 *	 }
+		 *	 },
+		 *   bind: function () {
+		 *     vsa.bindAction($('#test'), 'click', 'article.toggle');
+		 *   }
 		 * }, { // Private methods
 		 *	 _open: function (ev) {
 		 *	   console.log('Calling `_open` on the article manager.	 This is a private method!', this);
 		 *	   return "Hello!  I'm a return value!";
 		 *	 }
 		 * }, { // Public methods
-		 *	 // call this with `vsa.fire('article.toggle');`
+		 *	 // call this with `vsa.actionFire('article.toggle');`
 		 *	 toggle: function toggle () {
 		 *	   return this._open();
 		 *	 }
@@ -88,8 +105,12 @@ Dependencies: jQuery, Modernizr
 
 			for (method in publicMethods) {
 				if (publicMethods.hasOwnProperty(method)) {
-					this.attach((managerName + '.' + method), publicMethods[method]);
+					this.actionAttach((managerName + '.' + method), publicMethods[method]);
 				}
+			}
+			
+			if (isFunc(maintentanceMethods.bind)) {
+				maintentanceMethods.bind.call(_manager);
 			}
 
 			if (isFunc(maintentanceMethods.init)) {
@@ -102,7 +123,7 @@ Dependencies: jQuery, Modernizr
 		 * @param {String} managerName The name of the manager to remove
 		 * @returns {Object} The manager that was removed.
 		 */
-		destroyManager: function destroyManager (managerName) {
+		managerDestroy: function destroyManager (managerName) {
 			var manager = managers[managerName];
 			delete managers[managerName];
 
@@ -110,11 +131,11 @@ Dependencies: jQuery, Modernizr
 		},
 
 		/**
-		 * Attach an action handler to an action.  This action can be accessed globally with `vsa.fire()`.
+		 * Attach an action handler to an action.  This action can be accessed globally with `vsa.actionFire()`.
 		 * @param {String} actionName The action to attach to, given in `managerName.action` format
 		 * @returns {Object} The global `vsa` object for chaining
 		 */
-		attach: function attach (actionName, actionHandler) {
+		actionAttach: function actionAttach (actionName, actionHandler) {
 			var actionNameParts = actionName.split('.'),
 				managerName = actionNameParts[0],
 				memberName = actionNameParts[1];
@@ -124,10 +145,10 @@ Dependencies: jQuery, Modernizr
 				return this;
 			} else {
 				if (!isFunc(actionHandler)) {
-					throw 'vsa.attach: Valid action handler not provided.';
+					throw 'vsa.actionAttach: Valid action handler not provided.';
 				}
 				if (!managers[managerName]) {
-					throw 'vsa.attach: ' + managerName + ' is not a valid manager';
+					throw 'vsa.actionAttach: ' + managerName + ' is not a valid manager';
 				}
 			}
 		},
@@ -136,7 +157,7 @@ Dependencies: jQuery, Modernizr
 		 * Remove an action handler from the `vsa` object
 		 * @param {String} actionName The action to attach to, given in `managerName.action` format
 		 */
-		unattach: function unattach (actionName) {
+		actionUnattach: function actionUnattach (actionName) {
 			var actionNameParts = actionName.split('.'),
 				managerName = actionNameParts[0],
 				memberName = actionNameParts[1];
@@ -148,16 +169,16 @@ Dependencies: jQuery, Modernizr
 		
 		/**
 		 * Calls a method that is `attach`ed to the global `vsa` object.
-		 * @param {String} actionName The action to attach to, given in `managerName.action` format
+		 * @param {String} actionName The action to attach to, given in `managerName.action` format.
 		 * @returns {Any} The return value of the action handler that is being invoked.
 		 */
-		fire: function fire (actionName) {
+		actionFire: function actionFire (actionName) {
 			var actionNameParts = actionName.split('.'),
 				managerName = actionNameParts[0],
 				memberName = actionNameParts[1],
 				handler = managers[managerName][memberName];
 
-			if (managers[managerName].__public[memberName] && typeof handler === 'function') {
+			if (isPublicAction(actionName) && typeof handler === 'function') {
 				return handler.apply(managers[managerName], $.makeArray(arguments).slice(1));
 			} else {
 				if (console && console.error) {
@@ -166,26 +187,52 @@ Dependencies: jQuery, Modernizr
 			}
 		},
 		
-		bindAction: function bindAction (jqObj, eventType, actionName) {
+		/**
+		 * Bind a manager action to an event of a jQuery object.  When the event is triggered, the manager action will receive the event object as the first parameter, and the event's target element as the second parameter as a convenience.  This event handler is safely namespaced.
+		 * @param {Object} jqObj The jQuery object to bind to.
+		 * @param {String} eventType The event to bind to.
+		 * @param {String} actionName The manager action to handle the event.
+		 * @param {Boolean} Whether or not the event was properly bound.
+		 */
+		actionBind: function actionBind (jqObj, eventType, actionName) {
+			if (!isPublicAction(actionName)) {
+				logError('vsa.bindAction: "' + actionName + '" is not a valid public action');
+				return false;
+			}
+			
 			jqObj.bind(eventType + '.' + actionName, function (ev) {
 				var el = $(ev.target);
 				
-				window.vsa.fire(actionName, ev, el);
+				window.vsa.actionFire(actionName, ev, el);
 			});
-		},
-		
-		unbindAction: function bindAction (jqObj, eventType, actionName) {
-			jqObj.unbind(eventType + '.' + actionName);
+			
+			return true;
 		},
 		
 		/**
-		 * Wraps `vsa.lock` (see below!) to start an asynchronous sequence.  If there is a lock for the sequence, then this function blocks the sequence from beginning.  Blocked sequences are not queued - the method just returns.  This is beneficial because certain logical sequences (animations) must not be started again before being ended completely.
+		 * Unbind a manager action from a jQuery object.
+		 * @param {Object} jqObj The jQuery object to bind to.
+		 * @param {String} eventType The event to unbind the action from.
+		 * @param {String} actionName The manager action handling the event.
+		 * @param {Boolean} Whether or not the event was properly unbound.
+		*/
+		actionUnbind: function actionUnbind (jqObj, eventType, actionName) {
+			if (!isPublicAction(actionName)) {
+				return false;
+			}
+			
+			jqObj.unbind(eventType + '.' + actionName);
+			return true;
+		},
+		
+		/**
+		 * Wraps `vsa.lock` (see below!) to start an asynchronous sequence.  If there is a lock for the sequence (usually meaning that the previous invocation has not completed), then this function blocks the sequence from beginning.  Blocked sequences are not queued - the method just returns.  This is beneficial because certain logical sequences (animations) must not be started again before being ended completely.
 		 * @param {String} sequenceName The name of the sequence.  This usually should, but does not have to, have the same name as the action that it represents.
 		 * @param {Function} sequence The sequence function to invoke.  It will NOT be invoked if the lock has not been lifted (either by calling `vsa.lock.unlock()` or `vsa.endSequence()`).  You should have a call to `vsa.endSequence()` when the function is done.  `sequenceName` is passed as the first parameter to this function as a convenience.
 		 * @param {Boolean} ignoreLock Set this to `true` to start the squence regardless of any locks.
 		 * @returns {Boolean} Whether or not the sequence was started. (`true` if it was, `false` if it was not).
 		 */
-		startSequence: function startSequence (sequenceName, sequence, ignoreLock) {
+		sequenceStart: function sequenceStart (sequenceName, sequence, ignoreLock) {
 			if (!sequenceName) {
 				throw 'vsa.startSequence: "sequenceName" not provided!';
 			}
@@ -214,7 +261,7 @@ Dependencies: jQuery, Modernizr
 		 * Ends a sequence.  Calling this removes the corresponding lock and allows the sequence to be run again.
 		 * @param {String} sequenceName The name of the sequence.  This must correspond to the sequenceName provided to `vsa.startSequence()`.
 		 */
-		endSequence: function endSequence (sequenceName) {
+		sequenceEnd: function sequenceEnd (sequenceName) {
 			if (!window.vsa.lock.lockExists(sequenceName)) {
 				throw 'vsa.endSequence: "' + sequenceName + '" does not exist!';
 			}
@@ -223,8 +270,8 @@ Dependencies: jQuery, Modernizr
 		},
 
 		/**
-		A locking mechanism that can be used to prevent asynchronous actions from starting before the previous sequence has completed.  This is handy for complex animations.  First, create a lock with `vsa.lock.createLock()`.  Then lock and unlock it with `vsa.lock.lock()` and `vsa.lock.unlock()`.  'vsa.lock.isLocked()' will tell you if something is locked or not.  You can check if a lock has been made with `vsa.lock.lockExists()`.  The use case is to `return` out of the beginning of a function if you want the sequence to be NOT be executed asynchronously.
-		*/
+		 * A locking mechanism that can be used to prevent asynchronous actions from starting before the previous sequence has completed.  This is handy for complex animations.  First, create a lock with `vsa.lock.createLock()`.  Then lock and unlock it with `vsa.lock.lock()` and `vsa.lock.unlock()`.  'vsa.lock.isLocked()' will tell you if something is locked or not.  You can check if a lock has been made with `vsa.lock.lockExists()`.  The use case is to `return` out of the beginning of a function if you want the sequence to be NOT be executed asynchronously.
+		 */
 		lock: {
 			/** 
 			 * Adds a lock to the internal `locks` collection.
