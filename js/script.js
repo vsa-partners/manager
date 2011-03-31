@@ -1,52 +1,50 @@
-$(function(){
-	vsa.manager('article', { // Maintenance methods
-		init: function () {
-			console.log('calling init on:', this);
-		},
-		
-		bind: function () {
-			vsa.actionBind($('#test'), 'click', 'article.toggle');
-		}
-	}, { // Private methods
-		_open: function (ev) {
-			console.log('Calling `_open` on the article manager.  This is a private method!', this);
-			return "Hello!  I'm a return value!";
-		}
-	}, { // Public methods
-		// call this with `vsa.actionFire('article.toggle');`
-		toggle: function toggle () {
-			return this._open();
-		}
-	});
+/*global $:true, vsa:true, console:true */
+
+// Simple binding and sequencing demo.
+$(function (){	
 	
-	
-	vsa.manager('aside', {
-		init : function () {
-			console.log('init:', this);
-		},
+	(function boxManager () {
+		var box,
+			btn,
+			TRANSITION_DURATION = 750;
 		
-		bind: function () {
-			vsa.actionBind($('#test'), 'click', 'aside.sayHello');
-		}
-	}, { // Private methods
-		
-	}, { // Public methods
-		// call this with vsa.actionFire('aside.activate')
-		activate: function activate () {
-			console.log('trying to fire a public method...')
-			vsa.actionFire('article.toggle');
-			
-			console.log('trying to fire a private method...')
-			vsa.actionFire('article._open');
-		},
-		
-		sayHello: function sayHello (ev, el) {
-			console.log(ev, el);
-			alert('Hello!');
-			vsa.actionUnbind($('#test'), 'click', 'aside.sayHello');
-			console.log('Unbinding "sayHello" from "#test"...');
-		}
-	});
-	
+		vsa.manager('box', {
+			init: function () {
+				box = $('#box');
+				btn = $('button');
+			},
+
+			bind: function () {
+				vsa.actionBind(btn, 'click', 'box.move');
+			}
+		}, {
+			_logX: function () {
+				console.log(box.css('left'));
+			}
+		}, {
+			move: function (ev, el) {
+				var boxManager = this;
+				
+				vsa.sequenceStart('box.move', function (sequenceName) {
+					box
+						.animate({
+							'left': '+=200'
+						}, {
+							'duration': TRANSITION_DURATION,
+							'step': boxManager._logX
+						})
+						.animate({
+							'left': 0
+						}, {
+							'duration': TRANSITION_DURATION,
+							'step': boxManager._logX,
+							'complete': function () {
+								vsa.sequenceEnd(sequenceName);
+							}
+						});
+				});
+			}
+		});
+	} ());
 	
 });

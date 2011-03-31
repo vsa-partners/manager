@@ -84,7 +84,7 @@ Dependencies: jQuery, Modernizr
 		 * @codeend
 		 */
 		manager: function manager (managerName, maintentanceMethods, privateMethods, publicMethods) {
-			var _manager, method;
+			var _manager, method, retVal;
 
 			if (managers[managerName]) {
 				throw 'Manager "' + managerName + '" has already been defined.';
@@ -109,13 +109,15 @@ Dependencies: jQuery, Modernizr
 				}
 			}
 			
+			if (isFunc(maintentanceMethods.init)) {
+				retVal = maintentanceMethods.init.call(_manager);
+			}
+			
 			if (isFunc(maintentanceMethods.bind)) {
 				maintentanceMethods.bind.call(_manager);
 			}
-
-			if (isFunc(maintentanceMethods.init)) {
-				return maintentanceMethods.init.call(_manager);
-			}
+			
+			return retVal;
 		},
 
 		/**
