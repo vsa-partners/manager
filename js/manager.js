@@ -205,7 +205,8 @@ Dependencies: jQuery, Modernizr
 			jqObj.bind(eventType + '.' + actionName, function (ev) {
 				var el = $(ev.target);
 				
-				window.vsa.actionFire(actionName, ev, el);
+				//window.vsa.actionFire(actionName, ev, el);
+				window.vsa.actionFire.apply(window.vsa, [actionName, ev, el].concat($.makeArray(arguments).slice(1)));
 			});
 			
 			return true;
@@ -224,6 +225,37 @@ Dependencies: jQuery, Modernizr
 			}
 			
 			jqObj.unbind(eventType + '.' + actionName);
+			return true;
+		},
+		
+		// EXPERIMENTAL!
+		actionDelegate: function actionDelegate (jqObj, selector, eventType, actionName) {
+			if (!isPublicAction(actionName)) {
+				logError('vsa.actionDelegate: "' + actionName + '" is not a valid public action');
+				return false;
+			}
+			
+			jqObj.delegate(selector, eventType, function (ev) {
+				var el = $(ev.target);
+				
+				window.vsa.actionFire.apply(window.vsa, [actionName, ev, el].concat($.makeArray(arguments).slice(1)));
+			});
+			
+			return true;
+		},
+		
+		// EXPERIMENTAL!
+		actionUndelagate: function actionUndelagate (jqObj, selector, eventType, actionName) {
+			var actionNameParts = actionName.split('.'),
+				managerName = actionNameParts[0],
+				memberName = actionNameParts[1],
+				handler = managers[managerName][memberName];
+			
+			if (!isPublicAction(actionName)) {
+				return false;
+			}
+			
+			jqObj.undelegate(selector, eventType, handler);
 			return true;
 		},
 		
