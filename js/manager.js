@@ -228,23 +228,23 @@ Dependencies: jQuery, Modernizr
 			return true;
 		},
 		
-		// EXPERIMENTAL!
 		actionDelegate: function actionDelegate (jqObj, selector, eventType, actionName) {
+			var _arguments = arguments;
+			
 			if (!isPublicAction(actionName)) {
 				logError('vsa.actionDelegate: "' + actionName + '" is not a valid public action');
 				return false;
 			}
 			
 			jqObj.delegate(selector, eventType, function (ev) {
-				var el = $(ev.target);
+				var el = $(ev.currentTarget);
 				
-				window.vsa.actionFire.apply(window.vsa, [actionName, ev, el].concat($.makeArray(arguments).slice(1)));
+				window.vsa.actionFire.apply(window.vsa, [actionName, ev, el].concat($.makeArray(_arguments).slice(1)));
 			});
 			
 			return true;
 		},
 		
-		// EXPERIMENTAL!
 		actionUndelagate: function actionUndelagate (jqObj, selector, eventType, actionName) {
 			var actionNameParts = actionName.split('.'),
 				managerName = actionNameParts[0],
