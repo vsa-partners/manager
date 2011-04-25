@@ -247,6 +247,9 @@ Dependencies: jQuery, Modernizr
 			return true;
 		},
 		
+		/**
+		THIS NEEDS TO BE TESTED.
+		*/
 		actionDelegate: function actionDelegate (jqObj, selector, eventType, actionName) {
 			var _arguments = arguments;
 			
@@ -258,12 +261,16 @@ Dependencies: jQuery, Modernizr
 			jqObj.delegate(selector, eventType, function (ev) {
 				var el = $(ev.currentTarget);
 				
+				// Uh... should this actually be slicing anything from `_arguments`?
 				window.vsa.actionFire.apply(window.vsa, [actionName, ev, el].concat($.makeArray(_arguments).slice(1)));
 			});
 			
 			return true;
 		},
 		
+		/**
+		THIS NEEDS TO BE TESTED.
+		*/
 		actionUndelagate: function actionUndelagate (jqObj, selector, eventType, actionName) {
 			var actionNameParts = actionName.split('.'),
 				managerName = actionNameParts[0],
