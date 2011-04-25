@@ -15,7 +15,8 @@ $(function (){
 			},
 
 			bind: function () {
-				vsa.actionBind(btn, 'click', 'box.move');
+				// You can bind an action to multiple events!
+				vsa.actionBind(btn, 'click mouseleave mouseenter', 'box.move');
 			}
 		}, {
 			_logX: function () {
@@ -39,6 +40,7 @@ $(function (){
 							'duration': TRANSITION_DURATION,
 							'step': boxManager._logX,
 							'complete': function () {
+								vsa.actionUnbind(btn, 'mouseleave mouseenter', 'box.move');
 								vsa.sequenceEnd(sequenceName);
 							}
 						});

@@ -48,6 +48,11 @@ Dependencies: jQuery, Modernizr
 		
 		return (managers[managerName] && typeof managers[managerName].__public[memberName] !== 'undefined');
 	}
+	
+	function splitEvents (events) {
+		events = $.trim(events);
+		return events.split(/\s{1,}/);
+	}
 	/******************************** Private methods */
 	
 	/* Public methods *********************************/
@@ -192,22 +197,29 @@ Dependencies: jQuery, Modernizr
 		/**
 		 * Bind a manager action to an event of a jQuery object.  When the event is triggered, the manager action will receive the event object as the first parameter, and the event's target element as the second parameter as a convenience.  This event handler is safely namespaced.
 		 * @param {Object} jqObj The jQuery object to bind to.
-		 * @param {String} eventType The event to bind to.
+		 * @param {String} eventType The event to bind to.  You can specify multiple events, separated by spaces.
 		 * @param {String} actionName The manager action to handle the event.
 		 * @param {Boolean} Whether or not the event was properly bound.
 		 */
-		actionBind: function actionBind (jqObj, eventType, actionName) {
+		actionBind: function actionBind (jqObj, eventTypes, actionName) {
+			var i;
+				
+			function handler (ev) {
+				var el = $(ev.target);
+
+				window.vsa.actionFire.apply(window.vsa, [actionName, ev, el].concat($.makeArray(arguments).slice(1)));
+			}
+			
 			if (!isPublicAction(actionName)) {
 				logError('vsa.bindAction: "' + actionName + '" is not a valid public action');
 				return false;
 			}
 			
-			jqObj.bind(eventType + '.' + actionName, function (ev) {
-				var el = $(ev.target);
-				
-				//window.vsa.actionFire(actionName, ev, el);
-				window.vsa.actionFire.apply(window.vsa, [actionName, ev, el].concat($.makeArray(arguments).slice(1)));
-			});
+			eventTypes = splitEvents(eventTypes);
+			
+			for (i = 0; i < eventTypes.length; i++) {
+				jqObj.bind(eventTypes[i] + '.' + actionName, handler);
+			}
 			
 			return true;
 		},
@@ -215,16 +227,23 @@ Dependencies: jQuery, Modernizr
 		/**
 		 * Unbind a manager action from a jQuery object.
 		 * @param {Object} jqObj The jQuery object to bind to.
-		 * @param {String} eventType The event to unbind the action from.
+		 * @param {String} eventTypes The event to unbind the action from.  You can specify multiple events, separated by spaces.
 		 * @param {String} actionName The manager action handling the event.
 		 * @param {Boolean} Whether or not the event was properly unbound.
 		*/
-		actionUnbind: function actionUnbind (jqObj, eventType, actionName) {
+		actionUnbind: function actionUnbind (jqObj, eventTypes, actionName) {
+			var i;
+			
 			if (!isPublicAction(actionName)) {
 				return false;
 			}
 			
-			jqObj.unbind(eventType + '.' + actionName);
+			eventTypes = splitEvents(eventTypes);
+			
+			for (i = 0; i < eventTypes.length; i++) {
+				jqObj.unbind(eventTypes[i] + '.' + actionName);
+			}
+			
 			return true;
 		},
 		
